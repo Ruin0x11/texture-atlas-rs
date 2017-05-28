@@ -1,0 +1,11 @@
+[package]
+name = "texture_atlas"
+version = "0.1.0"
+authors = ["ruin <ipickering2@gmail.com>"]
+
+[dependencies]
+glium = "0.16.0"
+image = "0.13.0"
+serde = "0.9.11"
+serde_derive = "0.9.11"
+texture_packer = {version = "0.9.0", git = "https://github.com/Ruin0x11/texture_packer" }
