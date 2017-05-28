@@ -158,7 +158,15 @@ impl <'a> TileAtlasBuilder<'a> {
 }
 
 impl TileAtlas {
-    fn get_frame(&self, tile_type: TileIndex) -> &AtlasFrame {
+    pub fn new(locations: HashMap<TileIndex, String>, frames: HashMap<String, AtlasFrame>) -> Self {
+        TileAtlas {
+            locations: locations,
+            frames: frames,
+            textures: Vec::new(),
+        }
+    }
+
+    pub fn get_frame(&self, tile_type: TileIndex) -> &AtlasFrame {
         let tex_name = self.locations.get(&tile_type).unwrap();
         self.frames.get(tex_name).unwrap()
     }
