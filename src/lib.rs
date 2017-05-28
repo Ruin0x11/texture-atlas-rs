@@ -1,11 +1,17 @@
 #[macro_use] extern crate serde_derive;
+extern crate bincode;
+extern crate crypto;
 extern crate glium;
+extern crate glob;
 extern crate image;
 extern crate serde;
 extern crate texture_packer;
+extern crate toml;
 
 mod texture_atlas;
 mod tile_atlas;
+mod tile_atlas_config;
+mod toml_util;
 
 pub use texture_atlas::{TextureAtlasBuilder, TextureAtlas};
 pub use tile_atlas::{TileAtlasBuilder, TileAtlas};

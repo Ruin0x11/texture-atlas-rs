@@ -10,6 +10,7 @@ use texture_packer::importer::ImageImporter;
 use texture_packer::exporter::ImageExporter;
 
 use {AtlasRect, Texture2d, make_texture};
+use tile_atlas_config::TileAtlasConfig;
 
 pub type TileOffset = (u32, u32);
 pub type TileIndex = usize;
@@ -23,18 +24,11 @@ pub enum TileKind {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct AtlasTile {
-    pub offset: TileOffset,
-    pub is_autotile: bool,
-    pub tile_kind: TileKind,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
 pub struct AtlasFrame {
     tile_size: (u32, u32),
     texture_idx: usize,
     rect: AtlasRect,
-    offsets: HashMap<TileIndex, AtlasTile>,
+    offsets: HashMap<TileIndex, TileOffset>,
 }
 
 impl AtlasFrame {
@@ -73,14 +67,14 @@ impl <'a> TileAtlasBuilder<'a> {
         builder
     }
 
-    pub fn add_tile(&mut self, path_str: &str, index: TileIndex, tile_data: AtlasTile) {
+    pub fn add_tile(&mut self, path_str: &str, index: TileIndex, offset: TileOffset) {
         let key = path_str.to_string();
         assert!(self.frames.contains_key(&path_str.to_string()));
 
         {
             let mut frame = self.frames.get_mut(&key).unwrap();
             assert!(!frame.offsets.contains_key(&index));
-            frame.offsets.insert(index, tile_data);
+            frame.offsets.insert(index, offset);
             self.locations.insert(index, key);
         }
     }
@@ -140,7 +134,7 @@ impl <'a> TileAtlasBuilder<'a> {
 
             if let Some(s) = packed_tex_folder {
                 let mut file_path = PathBuf::from(s);
-                    file_path.push(&format!("{}.png", idx));
+                file_path.push(&format!("{}.png", idx));
 
                 let mut file = File::create(file_path).unwrap();
 
@@ -158,11 +152,21 @@ impl <'a> TileAtlasBuilder<'a> {
 }
 
 impl TileAtlas {
-    pub fn new(locations: HashMap<TileIndex, String>, frames: HashMap<String, AtlasFrame>) -> Self {
+    pub fn new(locations: HashMap<TileIndex, String>,
+               frames: HashMap<String, AtlasFrame>,
+               textures: Vec<Texture2d>) -> Self {
         TileAtlas {
             locations: locations,
             frames: frames,
-            textures: Vec::new(),
+            textures: textures,
+        }
+    }
+
+    pub fn make_config(&self, file_hash: String) -> TileAtlasConfig {
+        TileAtlasConfig {
+            locations: self.locations.clone(),
+            frames: self.frames.clone(),
+            file_hash: file_hash,
         }
     }
 
@@ -186,13 +190,7 @@ impl TileAtlas {
 
     pub fn get_sprite_tex_ratio(&self, tile_type: TileIndex) -> [f32; 2] {
         let frame = self.get_frame(tile_type);
-        let (mut sx, mut sy) = frame.tile_size;
-
-        if frame.offsets.get(&tile_type).unwrap().is_autotile {
-            // divide the autotile into 24x24 from 48x48
-            sx /= 2;
-            sy /= 2;
-        }
+        let (sx, sy) = frame.tile_size;
 
         let texture_idx = self.get_frame(tile_type).texture_idx;
         let dimensions = self.textures.get(texture_idx).unwrap().dimensions();
@@ -206,41 +204,21 @@ impl TileAtlas {
         self.get_frame(tile_type).tile_size
     }
 
-    pub fn get_texture_offset(&self, tile_type: TileIndex, msecs: u64) -> (f32, f32) {
+    pub fn get_texture_offset(&self, tile_type: TileIndex) -> (f32, f32) {
         let frame = self.get_frame(tile_type);
-        let tile = frame.offsets.get(&tile_type).unwrap();
+        let offset = frame.offsets.get(&tile_type).unwrap();
 
         let get_tex_coords = |index: (u32, u32)| {
             let tex_ratio = self.get_sprite_tex_ratio(tile_type);
-            let mut add_offset = get_add_offset(&frame.rect, &frame.tile_size);
+            let add_offset = get_add_offset(&frame.rect, &frame.tile_size);
 
-            match tile.tile_kind {
-                TileKind::Static => (),
-                TileKind::Animated(frame_count, delay) => {
-                    let current_frame = msecs / delay;
-                    let mut x_index_offset = current_frame % frame_count;
-
-                    if tile.is_autotile {
-                        x_index_offset *= 2;
-                    }
-
-                    add_offset.0 += x_index_offset as u32;
-                }
-            }
-
-            let mut ratio = 1;
-
-            if tile.is_autotile {
-                ratio = 2;
-            }
-
-            let tx = ((index.0 + add_offset.0) * ratio) as f32 * tex_ratio[0];
-            let ty = ((index.1 + add_offset.1) * ratio) as f32 * tex_ratio[1];
+            let tx = (index.0 + add_offset.0) as f32 * tex_ratio[0];
+            let ty = (index.1 + add_offset.1) as f32 * tex_ratio[1];
 
             (tx, ty)
         };
 
-        get_tex_coords(tile.offset)
+        get_tex_coords(*offset)
     }
 
     pub fn get_texture(&self, idx: usize) -> &Texture2d {

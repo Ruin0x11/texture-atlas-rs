@@ -9,3 +9,7 @@ image = "0.13.0"
 serde = "0.9.11"
 serde_derive = "0.9.11"
 texture_packer = {version = "0.9.0", git = "https://github.com/Ruin0x11/texture_packer" }
+rust-crypto = "^0.2"
+bincode = "0.7.0"
+glob = "0.2"
+toml = "0.3.2"
