@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
 use glium::backend::Facade;
@@ -126,14 +126,22 @@ impl <'a> TileAtlasBuilder<'a> {
         self.packers.push(TexturePacker::new_skyline(config));
     }
 
-    pub fn build<F: Facade>(&self, display: &F, packed_tex_folder: Option<&str>) -> TileAtlas {
+    pub fn build<F: Facade>(&self, display: &F, packed_tex_folder: Option<PathBuf>) -> TileAtlas {
         let mut textures = Vec::new();
+
+        if let Some(ref path_buf) = packed_tex_folder {
+            if Path::exists(path_buf.as_path()) {
+                fs::remove_dir_all(path_buf.as_path()).unwrap();
+            }
+
+            fs::create_dir_all(path_buf.as_path()).unwrap();
+        }
 
         for (idx, packer) in self.packers.iter().enumerate() {
             let image = ImageExporter::export(packer).unwrap();
 
-            if let Some(s) = packed_tex_folder {
-                let mut file_path = PathBuf::from(s);
+            if let Some(ref path_buf) = packed_tex_folder {
+                let mut file_path = path_buf.clone();
                 file_path.push(&format!("{}.png", idx));
 
                 let mut file = File::create(file_path).unwrap();

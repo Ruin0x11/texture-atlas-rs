@@ -130,7 +130,9 @@ impl TileAtlas {
 
         let hash = hash_str(toml_str);
 
-        let atlas = builder.build(display, Some(packed_folder));
+        let packed_path = get_config_cache_path(packed_folder);
+
+        let atlas = builder.build(display, Some(packed_path));
 
         let config = atlas.make_config(hash);
         write_tile_manager_config(&config, packed_folder);

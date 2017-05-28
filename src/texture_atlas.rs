@@ -62,7 +62,6 @@ impl<'a> TextureAtlasBuilder<'a> {
             image.save(&mut file, image::PNG).unwrap();
         }
 
-
         let texture = make_texture(display, image);
 
         let mut frames = HashMap::new();
